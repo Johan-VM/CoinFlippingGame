@@ -1,0 +1,103 @@
+---
+title: "Developing Data Products - Course Project"
+subtitle: "R Shiny App: Coin Flipping Game"
+author: "Johan Vásquez Mazo"
+date: "27/8/2020"
+output: slidy_presentation
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+## Coin Flipping Game explanation
+
+This RStudio Shiny app, named **Coin Flipping Game**, was created for the course project of Developing Data Products on Coursera. It simulates a game where two contestants bet money on the outcome of a coin, i.e., heads or tails. The user (you) bets on heads, and the opponent bets on tails. There are multiple widgets to make variations to the game, which will all be explained just following.
+
+The most important widget is an action button labeled "Flip the coin!", which flips a coin with the current game options each time it is pressed.
+
+Another widget is a numeric input control which alters the true probability of getting heads when flipping the coin. This value may range from 0 to 1, and is set to 0.5 by default.
+
+A radio button widget will modify the nature of the game. There are two options: "Fair game" and "Manually input bets". The former option calculates the amount of money your opponent must bet on tails, according to the true probability of getting heads and the amount of money you bet on heads, in order to make the game fair; that is, no one loses money in the long run. The latter option will enable an extra slider input, so as to let you choose both your bet on heads and your opponent's bet on tails; causing the game to be potentially unfair for either player. Both slider inputs may range from \$ 0 to \$ 10 and are set to \$ 5 by default.
+
+## Results and app page
+
+The results are displayed on the "Results" tab. There are two text outputs and two plot outputs, which are updated every time the action button is pressed.
+
+Regarding text outputs, they will indicate the last coin flip result and the corresponding amount of money you won or lost, as well as the total amount of money you've <span style="color:green">won (displayed green)</span> or <span style="color:red">lost (displayed red)</span> so far.
+
+As for plot outputs, the first plot will show the coin flip result (heads or tails) for every iteration, and the second plot will show the total amount of money you've won or lost until the last coin flip.
+
+The app is currently stored on a webpage of the shinyapps.io server: <https://johan-vm.shinyapps.io/ProjectApp/>.
+
+The .R files (server.R and ui.R) can be found on the GitHub repository: <https://github.com/Johan-VM/CoinFlippingGame>.
+
+## Examples
+
+Here is an example of what the outputs might look like after pressing the action button ten times. The set of game options is: probability of getting heads equal to 0.4, bet on heads equal to \$ 9, and fair game.
+
+```{r code}
+p <- 0.4
+q <- 1-p
+betH <- 9
+betT <- (q/p)*betH
+number <- 10
+
+iteration <- 1:number
+draw <- sample(c("Heads", "Tails"), size = number, replace = TRUE, prob = c(p, q))
+
+int <- as.integer(factor(draw, levels = c("Tails", "Heads"))) - 1
+earnings <- vector(mode = "numeric", length = number)
+totalEarned <- vector(mode = "numeric", length = number + 1)
+totalEarned[1] <- 0
+for (i in iteration) {
+    earnings[i] <- betT*int[i] - betH*(1-int[i])
+    totalEarned[i+1] <- totalEarned[i] + earnings[i]
+}
+totalEarned <- totalEarned[-1]
+
+if (earnings[number] > 0) {
+    paste0("The coin landed on Heads. You win $ ", round(earnings[number], 2), ".")
+} else if (earnings[number] < 0) {
+    paste0("The coin landed on Tails. You lose $ ", round(-earnings[number], 2), ".")
+}
+
+if (totalEarned[number] > 0) {
+    paste0("You've won $ ", round(totalEarned[number], 2), " so far.")
+} else if (totalEarned[number] < 0) {
+    paste0("You've lost $ ", round(-totalEarned[number], 2), " so far.")
+} else {
+    paste0("You haven't won nor lost any money so far.")
+}
+```
+
+***
+
+```{r plots, warning = FALSE, message = FALSE}
+library(ggplot2)
+
+values <- data.frame(iteration, draw)
+ggplot(values, aes(x = iteration, y = draw)) + geom_point(size = 3, color = "darkslategrey") + 
+    theme_bw() + labs(x = "Iteration", y = "Coin flip result") + 
+    theme(plot.background = element_rect(fill = "#ffd5b0")) + 
+    theme(panel.background = element_rect(fill = "snow", color = "#0f0947", size = 2, linetype = "solid"), 
+          panel.grid.major = element_line(size = 0.5, linetype = 'solid', colour = "snow3"), 
+          panel.grid.minor = element_line(size = 0.5, linetype = 'solid', colour = "snow2")) + 
+    theme(axis.text.x = element_text(color = "black", size = 11), 
+          axis.text.y = element_text(color = "black", size = 11),
+          axis.title.x = element_text(size = 12), axis.title.y = element_text(size = 12))
+
+totals <- data.frame(iteration, totalEarned)
+totals$colors <- factor(sign(totals$totalEarned), levels = c(-1, 0, 1))
+ggplot(totals, aes(x = iteration, y = totalEarned, color = colors)) + geom_point(size = 3) + 
+    theme_bw() + labs(x = "Iteration", y = "Your total earnings [$]") + 
+    scale_color_manual(values = c("orangered", "midnightblue", "forestgreen")) + 
+    theme(legend.position = "none") + 
+    theme(plot.background = element_rect(fill = "#ffd5b0")) + 
+    theme(panel.background = element_rect(fill = "snow", color = "#0f0947", size = 2, linetype = "solid"), 
+          panel.grid.major = element_line(size = 0.5, linetype = 'solid', colour = "snow3"), 
+          panel.grid.minor = element_line(size = 0.5, linetype = 'solid', colour = "snow2")) + 
+    theme(axis.text.x = element_text(color = "black", size = 11), 
+          axis.text.y = element_text(color = "black", size = 11),
+          axis.title.x = element_text(size = 12), axis.title.y = element_text(size = 12))
+```
